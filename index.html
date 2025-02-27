@@ -104,7 +104,7 @@
                 tick: function (time, deltaTime) // deltaTime: milliseconds
                 {
                     let deltaSeconds = deltaTime / 1000;
-                    let eventFrequency = 0.75;
+                    let eventFrequency = 0.5;
 
                     if (Math.random() < eventFrequency * deltaSeconds) {
                         console.log("Firework!");
@@ -117,9 +117,9 @@
                         // let z = radius * Math.sin(angleRadians);
                         let bridge = document.getElementById("helix_bridge");
                         let position = bridge.getAttribute("position");
-                        let x = position.x + (Math.random() * 500);
+                        let x = position.x + (Math.random() * 200);
                         let y = 0;
-                        let z = position.z - 100;
+                        let z = position.z;
 
 
                         let firework = document.createElement("a-entity");
@@ -127,9 +127,9 @@
                         firework.setAttribute("position", { "x": x, "y": y, "z": z });
 
                         // random flight parameters
-                        let maxHeight = randomNormal(4, 8);
+                        let maxHeight = randomNormal(40, 60);
                         firework.setAttribute("firework", "maxHeight", maxHeight);
-                        let riseTime = randomNormal(2, 3);
+                        let riseTime = randomNormal(3, 5);
                         firework.setAttribute("firework", "riseTime", riseTime);
                         this.sceneElement.appendChild(firework);
                         // firework.setAttribute("scale", { x: 10, y: 10, z: 10 });
@@ -137,7 +137,7 @@
                         // chance of multi-firework
                         // 0.10 = 1/10 double, 1/100 triple, 1/1000 quadruple, etc.
                         // 0.20 =  1/5 double,  1/25 triple,  1/125 quadruple, etc.
-                        while (Math.random() < 0.15) {
+                        while (Math.random() < 0.1) {
                             let fireworkExtra = document.createElement("a-entity");
                             fireworkExtra.setAttribute("firework", "");
                             // synchronize position, height, time to explosion
@@ -182,8 +182,8 @@
 
                     this.particleTrail = document.createElement("a-image");
                     this.particleTrail.setAttribute("position", "0 -0.1 0");
-                    this.particleTrail.setAttribute("width", "0.5");
-                    this.particleTrail.setAttribute("height", "0.5");
+                    this.particleTrail.setAttribute("width", "5");
+                    this.particleTrail.setAttribute("height", "5");
                     this.particleTrail.setAttribute("scale", "1 1 1");
 
                     this.particleTrail.setAttribute("src", "#fireballSheet");
@@ -216,13 +216,13 @@
                     this.particleBurst.setAttribute("spe-particles", "texture", "images/particles/sparkle.png");
                     this.particleBurst.setAttribute("spe-particles", "blending", "additive");
                     this.particleBurst.setAttribute("spe-particles", "distribution", "sphere");
-                    this.particleBurst.setAttribute("spe-particles", "radius", 0.01);
+                    this.particleBurst.setAttribute("spe-particles", "radius", 0.1);
 
                     // particles both shrink and fade during last moments
                     this.particleBurst.setAttribute("spe-particles", "opacity", [1, 1, 1, 0]);
-                    // this.particleBurst.setAttribute("spe-particles", "size", [1, 1, 1, 0]);
+                    this.particleBurst.setAttribute("spe-particles", "size", [9, 9, 9, 0]);
 
-                    let particleCount = Math.floor(randomUniform(100, 999));
+                    let particleCount = Math.floor(randomUniform(1000, 9999));
                     this.particleBurst.setAttribute("spe-particles", "particleCount", particleCount);
 
                     // change of particle burst vs. particle stream
@@ -232,7 +232,7 @@
                         this.particleBurst.setAttribute("spe-particles", "activeMultiplier", particleCount / 128);
 
                     // note: when distribution = 'sphere', only first component of velocity vectors are used
-                    let baseVelocity = randomUniform(1, 2);
+                    let baseVelocity = randomUniform(5, 10);
                     this.particleBurst.setAttribute("spe-particles", "velocity", { "x": baseVelocity, "y": 0, "z": 0 });
                     this.particleBurst.setAttribute("spe-particles", "velocitySpread", { "x": 0.5, "y": 0, "z": 0 });
                     this.particleBurst.setAttribute("spe-particles", "drag", 1.00);
@@ -240,7 +240,7 @@
 
                     // add a bit of gravity
                     this.particleBurst.setAttribute("spe-particles", "accelerationDistribution", "box");
-                    this.particleBurst.setAttribute("spe-particles", "acceleration", { "x": 0, "y": -0.2, "z": 0 });
+                    this.particleBurst.setAttribute("spe-particles", "acceleration", { "x": 0, "y": -0.07, "z": 0 });
                     this.particleBurst.setAttribute("spe-particles", "accelerationSpread", { "x": 0, "y": 0.2, "z": 0 });
 
                     // how long will particles last?
@@ -465,8 +465,8 @@
             }, 100); // Chờ 100ms để tránh lỗi chưa load model
             this.style.display = "none"; // Ẩn nút sau khi bấm
             // activate the spawner
-            //let camera = document.querySelector("#camera");
-            // camera.setAttribute("spawner", "");
+            let camera = document.querySelector("#camera");
+            camera.setAttribute("spawner", "");
         });
         console.log({ THREE, AFRAME });
         // 🎯 Theo dõi vị trí GPS
