@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="vi">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WebAR GPS - Cầu Nối Hai Bờ</title>
+    <!-- A-Frame itself -->
+    <script src="https://aframe.io/releases/1.3.0/aframe.min.js"></script>
+
+    <!-- Pure three.js code that the A-Frame components use for location-based AR -->
+    <script type='text/javascript'
+        src='https://raw.githack.com/AR-js-org/AR.js/3.4.5/three.js/build/ar-threex-location-only.js'></script>
+
+    <!-- AR.js A-Frame components -->
+    <script type='text/javascript'
+        src='https://raw.githack.com/AR-js-org/AR.js/3.4.5/aframe/build/aframe-ar.js'></script>
+    <!-- A-Frame -->
+    <script src="https://cdn.jsdelivr.net/gh/c-frame/aframe-extras@6.1.0/dist/aframe-extras.controls.min.js"></script>
+
+    <script>
+
+        // 🌉 Xử lý xoay và phóng to bằng 2 ngón tay
+        AFRAME.registerComponent('gesture-handler', {
+            schema: { enabled: { default: true } },
+            init: function () {
+                this.handleScale = this.handleScale.bind(this);
+                this.handleRotation = this.handleRotation.bind(this);
+                this.startDistance = null;
+                this.startX = null;
+
+                this.el.sceneEl.addEventListener("touchstart", (event) => {
+                    if (event.touches.length === 2) {
+                        this.startDistance = this.getDistance(event.touches);
+                    } else if (event.touches.length === 1) {
+                        this.startX = event.touches[0].clientX; // Lưu vị trí X ban đầu
+                    }
+                });
+
+                this.el.sceneEl.addEventListener("touchmove", (event) => {
+                    if (event.touches.length === 2) {
+                        this.handleScale(event);
+                    } else if (event.touches.length === 1) {
+                        this.handleRotation(event);
+                    }
+                });
+            },
+
+            getDistance: function (touches) {
+                let dx = touches[0].clientX - touches[1].clientX;
+                let dy = touches[0].clientY - touches[1].clientY;
+                return Math.sqrt(dx * dx + dy * dy);
+            },
+
+            handleScale: function (event) {
+                let newDistance = this.getDistance(event.touches);
+                if (!this.startDistance) return;
+                let scaleChange = newDistance / this.startDistance;
+                let model = this.el;
+                let scale = model.getAttribute("scale");
+                model.setAttribute("scale", {
+                    x: scale.x * scaleChange,
+                    y: scale.y * scaleChange,
+                    z: scale.z * scaleChange
+                });
+                this.startDistance = newDistance;
+            },
+
+            handleRotation: function (event) {
+                let newX = event.touches[0].clientX;
+                if (this.startX === null) return;
+
+                let rotationChange = (newX - this.startX) * 0.5; // Điều chỉnh tốc độ xoay
+                let model = this.el;
+                let rotation = model.getAttribute("rotation");
+
+                model.setAttribute("rotation", {
+                    x: 0, // Không thay đổi trục X
+                    y: rotation.y + rotationChange, // Xoay quanh trục Y
+                    z: 0  // Không thay đổi trục Z
+                });
+
+                this.startX = newX;
+            }
+
+        });
+
+    </script>
+</head>
+
+<body>
+    <!-- <a-scene vr-mode-ui="enabled: false" arjs="sourceType: webcam; videoTexture: true; debugUIEnabled: false;"> -->
+    <a-scene vr-mode-ui="enabled: false" arjs="sourceType: webcam; videoTexture: true; debugUIEnabled: true;">
+
+        <!-- Thêm ánh sáng -->
+        <a-light type="ambient" color="#ffffff" intensity="0.5"></a-light>
+        <a-light type="directional" color="#ffffff" intensity="1.0" position="1 3 1"></a-light>
+        <!-- Camera -->
+        <a-camera gps-camera gpsMinDistance="5" rotation-reader></a-camera>
+
+        <!-- Cây cầu hiển thị ngay -->
+        <a-entity id="helix_bridge" gps-entity-place="latitude: 10.912037; longitude: 106.584806" position="0 0 0"
+            scale="1 1 1" gltf-model="helix_bridge.glb" rotation="0 0 0" visible="true" gesture-handler>
+        </a-entity>
+
+    
+    </a-scene>
+
+    <div id="coords"
+        style="position: fixed; top: 10px; left: 10px; background: rgba(0,0,0,0.7); color: white; padding: 10px; border-radius: 5px; font-size: 14px;">
+        📍 Đang xác định vị trí...
+    </div>
+
+    <script>
+        console.log({ THREE, AFRAME });
+        // 🎯 Theo dõi vị trí GPS
+        navigator.geolocation.watchPosition(success, error, { enableHighAccuracy: true });
+
+        function calculateDistance(lat1, lon1, lat2, lon2) {
+            const R = 6371e3; // Bán kính Trái Đất (mét)
+            const φ1 = lat1 * Math.PI / 180;
+            const φ2 = lat2 * Math.PI / 180;
+            const Δφ = (lat2 - lat1) * Math.PI / 180;
+            const Δλ = (lon2 - lon1) * Math.PI / 180;
+
+            const a = Math.sin(Δφ / 2) * Math.sin(Δφ / 2) +
+                Math.cos(φ1) * Math.cos(φ2) *
+                Math.sin(Δλ / 2) * Math.sin(Δλ / 2);
+            const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+
+            return R * c; // Khoảng cách tính bằng mét
+        }
+
+        function success(position) {
+            let lat = position.coords.latitude;
+            let lon = position.coords.longitude;
+            let bridgeLat = 10.912037;
+            let bridgeLon = 106.584806;
+            let distance = calculateDistance(lat, lon, bridgeLat, bridgeLon).toFixed(2); // Làm tròn 2 số lẻ
+            document.getElementById("coords").innerHTML = `📍 Lat: ${lat} <br> Lon: ${lon} <br> 🔢 Khoảng cách: ${distance}m`;
+        }
+
+
+        function error() {
+            console.log("❌ Không thể lấy vị trí.");
+        }
+
+        // function calculateDistance(lat1, lon1, lat2, lon2) {
+        //     const R = 6371e3; // Bán kính Trái Đất (mét)
+        //     const φ1 = lat1 * Math.PI / 180;
+        //     const φ2 = lat2 * Math.PI / 180;
+        //     const Δφ = (lat2 - lat1) * Math.PI / 180;
+        //     const Δλ = (lon2 - lon1) * Math.PI / 180;
+
+        //     const a = Math.sin(Δφ / 2) * Math.sin(Δφ / 2) +
+        //         Math.cos(φ1) * Math.cos(φ2) *
+        //         Math.sin(Δλ / 2) * Math.sin(Δλ / 2);
+        //     const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+        //     return R * c; // Khoảng cách tính bằng mét
+        // }
+
+        // let lastLat = null;
+        // let lastLon = null;
+        // let bridgeLat = 10.772957;
+        // let bridgeLon = 106.708171;
+
+        // navigator.geolocation.watchPosition((position) => {
+        //     let lat = position.coords.latitude;
+        //     let lon = position.coords.longitude;
+        //     if (lastLat && lastLon && Math.abs(lat - lastLat) < 0.00001 && Math.abs(lon - lastLon) < 0.00001) {
+        //         return; // Bỏ qua cập nhật nếu di chuyển quá nhỏ
+        //     }
+        //     lastLat = lat;
+        //     lastLon = lon;
+        //     let distance = calculateDistance(lat, lon, bridgeLat, bridgeLon).toFixed(2);
+        //     document.getElementById("coords").innerHTML = `📍 Lat: ${lat} <br> Lon: ${lon} <br> 🔢 Khoảng cách: ${distance}m`;
+        //     // Đặt lại cầu về vị trí cố định
+        //     let bridge = document.querySelector("#helix_bridge");
+        //     if (bridge) {
+        //         bridge.setAttribute("gps-entity-place", `latitude: ${bridgeLat}; longitude: ${bridgeLon}`);
+        //         bridge.setAttribute("position", "0 0 0");
+        //     }
+        // }, error, { enableHighAccuracy: true });
+
+    </script>
+</body>
+
+</html>

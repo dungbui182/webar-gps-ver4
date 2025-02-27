@@ -1,0 +1,668 @@
+<!DOCTYPE html>
+<html lang="vi">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WebAR GPS </title>
+    <script src="https://aframe.io/releases/1.3.0/aframe.min.js"></script>
+    <script type='text/javascript'
+        src='https://raw.githack.com/AR-js-org/AR.js/3.4.5/three.js/build/ar-threex-location-only.js'></script>
+    <script type='text/javascript'
+        src='https://raw.githack.com/AR-js-org/AR.js/3.4.5/aframe/build/aframe-ar.js'></script>
+
+    <!-- <script src="js/aframe-master.1.0.4.min.js"></script> -->
+    <script src="js/aframe-environment-component.min-old.js"></script>
+    <script src="js/aframe-spe-particles-component.js"></script>
+    <script src="js/aframe-spritesheet-animation.js"></script>
+    <script>
+        // 🌉 Xử lý xoay và phóng to bằng 2 ngón tay
+        AFRAME.registerComponent('gesture-handler', {
+            schema: { enabled: { default: true } },
+            init: function () {
+                this.handleScale = this.handleScale.bind(this);
+                this.handleRotation = this.handleRotation.bind(this);
+                this.startDistance = null;
+                this.startX = null;
+
+                this.el.sceneEl.addEventListener("touchstart", (event) => {
+                    if (event.touches.length === 2) {
+                        this.startDistance = this.getDistance(event.touches);
+                    } else if (event.touches.length === 1) {
+                        this.startX = event.touches[0].clientX; // Lưu vị trí X ban đầu
+                    }
+                });
+
+                this.el.sceneEl.addEventListener("touchmove", (event) => {
+                    if (event.touches.length === 2) {
+                        this.handleScale(event);
+                    } else if (event.touches.length === 1) {
+                        this.handleRotation(event);
+                    }
+                });
+            },
+
+            getDistance: function (touches) {
+                let dx = touches[0].clientX - touches[1].clientX;
+                let dy = touches[0].clientY - touches[1].clientY;
+                return Math.sqrt(dx * dx + dy * dy);
+            },
+
+            handleScale: function (event) {
+                let newDistance = this.getDistance(event.touches);
+                if (!this.startDistance) return;
+                let scaleChange = newDistance / this.startDistance;
+                let model = this.el;
+                let scale = model.getAttribute("scale");
+                model.setAttribute("scale", {
+                    x: scale.x * scaleChange,
+                    y: scale.y * scaleChange,
+                    z: scale.z * scaleChange
+                });
+                this.startDistance = newDistance;
+            },
+
+            handleRotation: function (event) {
+                let newX = event.touches[0].clientX;
+                if (this.startX === null) return;
+
+                let rotationChange = (newX - this.startX) * 0.5; // Điều chỉnh tốc độ xoay
+                let model = this.el;
+                let rotation = model.getAttribute("rotation");
+
+                model.setAttribute("rotation", {
+                    x: 0, // Không thay đổi trục X
+                    y: rotation.y + rotationChange, // Xoay quanh trục Y
+                    z: 0  // Không thay đổi trục Z
+                });
+
+                this.startX = newX;
+            }
+
+        });
+    </script>
+
+    <script>
+
+        function randomNormal(min, max) {
+            let rand = 0;
+            for (let n = 0; n < 6; n++)
+                rand += Math.random();
+            return min + (max - min) * (rand / 6);
+        }
+
+        function randomUniform(min, max) {
+            return min + (max - min) * Math.random();
+        }
+
+        AFRAME.registerComponent('spawner',
+            {
+                init: function () {
+                    this.sceneElement = document.querySelector('a-scene');
+                },
+
+                tick: function (time, deltaTime) // deltaTime: milliseconds
+                {
+                    let deltaSeconds = deltaTime / 1000;
+                    let eventFrequency = 0.75;
+
+                    if (Math.random() < eventFrequency * deltaSeconds) {
+                        console.log("Firework!");
+                        // let angle = THREE.Math.degToRad(270);
+                        // let angleSpread = THREE.Math.degToRad(90);
+                        // let angleRadians = angle + randomNormal(-angleSpread, angleSpread);
+                        // let radius = 9;
+                        // let x = radius * Math.cos(angleRadians);
+                        // let y = 0;
+                        // let z = radius * Math.sin(angleRadians);
+                        let bridge = document.getElementById("helix_bridge");
+                        let position = bridge.getAttribute("position");
+                        let x = position.x + (Math.random() * 500);
+                        let y = 0;
+                        let z = position.z - 100;
+
+
+                        let firework = document.createElement("a-entity");
+                        firework.setAttribute("firework", "");
+                        firework.setAttribute("position", { "x": x, "y": y, "z": z });
+
+                        // random flight parameters
+                        let maxHeight = randomNormal(4, 8);
+                        firework.setAttribute("firework", "maxHeight", maxHeight);
+                        let riseTime = randomNormal(2, 3);
+                        firework.setAttribute("firework", "riseTime", riseTime);
+                        this.sceneElement.appendChild(firework);
+                        // firework.setAttribute("scale", { x: 10, y: 10, z: 10 });
+
+                        // chance of multi-firework
+                        // 0.10 = 1/10 double, 1/100 triple, 1/1000 quadruple, etc.
+                        // 0.20 =  1/5 double,  1/25 triple,  1/125 quadruple, etc.
+                        while (Math.random() < 0.15) {
+                            let fireworkExtra = document.createElement("a-entity");
+                            fireworkExtra.setAttribute("firework", "");
+                            // synchronize position, height, time to explosion
+                            fireworkExtra.setAttribute("position", { "x": x, "y": y, "z": z });
+                            fireworkExtra.setAttribute("firework", "maxHeight", maxHeight);
+                            fireworkExtra.setAttribute("firework", "riseTime", riseTime);
+                            this.sceneElement.appendChild(fireworkExtra);
+                        }
+                    }
+                }
+            });
+
+        AFRAME.registerComponent('firework',
+            {
+                schema:
+                {
+                    color: { type: 'string', default: "" },
+                    maxHeight: { type: 'number', default: 4.5 },
+                    riseTime: { type: 'number', default: 2.5 }	// time to reach maxHeight
+                },
+
+                randomColor: function () {
+                    let colorList = ["red", "orange", "gold", "green", "cyan", "#0088FF", "violet"];
+                    let colorIndex = Math.floor(colorList.length * Math.random());
+                    return colorList[colorIndex];
+                },
+
+                init: function () {
+                    // set random color if none already set
+                    if (this.data.color == "")
+                        this.data.color = this.randomColor();
+
+                    // set up movement animation
+                    let p = this.el.object3D.position;
+                    this.el.setAttribute("animation__position", "property", "position");
+                    this.el.setAttribute("animation__position", "from", { "x": p.x, "y": p.y, "z": p.z });
+                    this.el.setAttribute("animation__position", "to", { "x": p.x, "y": p.y + this.data.maxHeight, "z": p.z });
+                    this.el.setAttribute("animation__position", "dur", this.data.riseTime * 1000);
+                    this.el.setAttribute("animation__position", "easing", "easeOutQuad");  // fast at start, then slower
+
+                    // trail effect ----------------------------------------------------------
+
+                    this.particleTrail = document.createElement("a-image");
+                    this.particleTrail.setAttribute("position", "0 -0.1 0");
+                    this.particleTrail.setAttribute("width", "0.5");
+                    this.particleTrail.setAttribute("height", "0.5");
+                    this.particleTrail.setAttribute("scale", "1 1 1");
+
+                    this.particleTrail.setAttribute("src", "#fireballSheet");
+
+                    this.particleTrail.setAttribute("spritesheet-animation", "rows: 1; columns: 8; frameDuration: 0.08; loop: true;");
+
+                    this.particleTrail.setAttribute("material", "blending: additive; transparent: true; opacity: 1;");
+
+
+                    this.particleTrail.setAttribute("animation__fade", "property", "material.opacity");
+                    this.particleTrail.setAttribute("animation__fade", "from", 1.0);
+                    this.particleTrail.setAttribute("animation__fade", "to", 0.2);
+                    this.particleTrail.setAttribute("animation__fade", "dur", this.data.riseTime * 1000);
+                    this.particleTrail.setAttribute("animation__fade", "easing", "easeOutQuad");  // slow at start, then fast
+
+
+                    this.particleTrail.setAttribute("animation__shrink", "property", "scale");
+                    this.particleTrail.setAttribute("animation__shrink", "from", "1 1 1");
+                    this.particleTrail.setAttribute("animation__shrink", "to", "0.25 0.25 0.25");
+                    this.particleTrail.setAttribute("animation__shrink", "dur", this.data.riseTime * 1000);
+                    this.particleTrail.setAttribute("animation__shrink", "easing", "easeOutQuad");  // slow at start, then fast
+
+                    this.el.appendChild(this.particleTrail);
+
+                    // burst effect ----------------------------------------------------------
+
+                    this.particleBurst = document.createElement("a-entity");
+                    this.particleBurst.setAttribute("spe-particles", "");
+
+                    this.particleBurst.setAttribute("spe-particles", "texture", "images/particles/sparkle.png");
+                    this.particleBurst.setAttribute("spe-particles", "blending", "additive");
+                    this.particleBurst.setAttribute("spe-particles", "distribution", "sphere");
+                    this.particleBurst.setAttribute("spe-particles", "radius", 0.01);
+
+                    // particles both shrink and fade during last moments
+                    this.particleBurst.setAttribute("spe-particles", "opacity", [1, 1, 1, 0]);
+                    // this.particleBurst.setAttribute("spe-particles", "size", [1, 1, 1, 0]);
+
+                    let particleCount = Math.floor(randomUniform(100, 999));
+                    this.particleBurst.setAttribute("spe-particles", "particleCount", particleCount);
+
+                    // change of particle burst vs. particle stream
+                    if (Math.random() < 0.80)
+                        this.particleBurst.setAttribute("spe-particles", "activeMultiplier", particleCount);
+                    else
+                        this.particleBurst.setAttribute("spe-particles", "activeMultiplier", particleCount / 128);
+
+                    // note: when distribution = 'sphere', only first component of velocity vectors are used
+                    let baseVelocity = randomUniform(1, 2);
+                    this.particleBurst.setAttribute("spe-particles", "velocity", { "x": baseVelocity, "y": 0, "z": 0 });
+                    this.particleBurst.setAttribute("spe-particles", "velocitySpread", { "x": 0.5, "y": 0, "z": 0 });
+                    this.particleBurst.setAttribute("spe-particles", "drag", 1.00);
+                    this.particleBurst.setAttribute("spe-particles", "randomizeVelocity", true);
+
+                    // add a bit of gravity
+                    this.particleBurst.setAttribute("spe-particles", "accelerationDistribution", "box");
+                    this.particleBurst.setAttribute("spe-particles", "acceleration", { "x": 0, "y": -0.2, "z": 0 });
+                    this.particleBurst.setAttribute("spe-particles", "accelerationSpread", { "x": 0, "y": 0.2, "z": 0 });
+
+                    // how long will particles last?
+                    this.burstDuration = randomUniform(1.0, 3.0);
+                    this.particleBurst.setAttribute("spe-particles", "maxAge", this.burstDuration);
+                    this.particleBurst.setAttribute("spe-particles", "maxAgeSpread", this.burstDuration / 4);
+                    // duration = maximum amount of time to emit particles;
+                    //        	  should be less than smallest max age to prevent second burst
+                    this.particleBurst.setAttribute("spe-particles", "duration", 0.5);
+
+                    // default: steady color
+                    let colorArray = ["white", this.data.color, this.data.color, this.data.color];
+                    // random chance of color shifting
+                    if (Math.random() < 0.25) {
+                        let color2 = this.data.color;
+                        // make sure second color is different from first
+                        while (color2 == this.data.color) {
+                            color2 = this.randomColor();
+                        }
+                        colorArray = ["white", this.data.color, color2, color2];
+                    }
+                    this.particleBurst.setAttribute("spe-particles", "color", colorArray);
+
+                    // disable burst effect for now;
+                    //   will be enabled (in tick method) after reaching max height
+                    this.particleBurst.setAttribute("spe-particles", "enabled", false);
+
+                    this.el.appendChild(this.particleBurst);
+
+                    this.elapsedTime = 0;
+                    this.burstStart = false;
+
+                    // audio effects
+                    this.launchSound = document.getElementById("launchSound");
+                    this.launchSound.components.sound.playSound();
+                    if (this.burstDuration < 1.6 || particleCount < 300)
+                        this.burstSound = document.getElementById("burst1Sound");
+                    else if (this.burstDuration < 2.4)
+                        this.burstSound = document.getElementById("burst2Sound");
+                    else // this.burstDuration < 3.0
+                        this.burstSound = document.getElementById("burst3Sound");
+                },
+
+                tick: function (time, deltaTime) {
+                    this.elapsedTime += deltaTime / 1000;
+
+                    // firework has reached max height, start burst effect
+                    if (this.elapsedTime > this.data.riseTime && this.burstStart == false) {
+                        this.burstStart = true;
+                        this.particleBurst.setAttribute("spe-particles", "enabled", true);
+
+                        this.el.removeChild(this.particleTrail);
+
+                        this.burstSound.components.sound.playSound();
+                    }
+
+                    // firework finished; remove self from scene
+                    //  need to take into account particle age variation (1.25 factor)
+                    if (this.elapsedTime > this.data.riseTime + this.burstDuration * 1.25) {
+                        let element = this.el;
+                        element.parentNode.removeChild(element);
+                    }
+                }
+            });
+
+        // runs when user clicks button
+        AFRAME.registerComponent('start',
+            {
+                init: function () {
+                    // block pointer events until buttonEnter is clicked
+                    let uiDiv = document.getElementById("uiDiv");
+                    uiDiv.style["pointer-events"] = "auto";
+
+                    // set up background blocker
+                    uiDiv.style["background-color"] = "rgba(0, 0, 0, 0.75)";
+
+                    // indicate clickable with hand cursor (desktop)
+                    let buttonEnter = document.getElementById("buttonEnter");
+                    buttonEnter.style.cursor = "pointer";
+
+                    // fade-in functionality
+                    let fadeIn = function () {
+                        // allow point events again
+                        uiDiv.style["pointer-events"] = "none";
+
+                        // sounds can only be triggered after a mouse interaction
+                        let soundPlayer = document.querySelector("#ambientSound");
+                        soundPlayer.components.sound.playSound();
+
+                        // remove startButton
+                        buttonEnter.parentNode.remove(buttonEnter);
+
+                        // fade out uiDiv background
+                        uiDiv.style["background-color"] = "rgba(0, 0, 0, 0.0)";
+                        uiDiv.style["transition"] = "background-color 1000ms linear";
+
+                        // activate the spawner
+                        let camera = document.querySelector("#camera");
+                        camera.setAttribute("spawner", "");
+                    }
+
+                    // activate for desktop/touchscreen
+                    buttonEnter.addEventListener('touchstart', fadeIn);
+                    buttonEnter.addEventListener('mousedown', fadeIn);
+                }
+            });
+    </script>
+
+    <style>
+        .mainUI {
+            position: fixed;
+            top: 0px;
+            width: 100%;
+            height: 100%;
+            z-index: 1;
+            pointer-events: none;
+            /* allow click-through in transparent areas */
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .regionUI {
+            position: absolute;
+            display: flex;
+            flex-direction: row;
+            pointer-events: none;
+        }
+
+        .buttonUI {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            pointer-events: auto;
+            filter: drop-shadow(0px 0px 20px white);
+        }
+    </style>
+</head>
+
+<body>
+    <a-scene vr-mode-ui="enabled: false" arjs="sourceType: webcam; videoTexture: true; debugUIEnabled: true;">
+        <!-- Thêm ánh sáng -->
+        <a-light type="ambient" color="#ffffff" intensity="1.5"></a-light>
+        <a-light type="directional" color="#ffffff" intensity="1.0" position="-10 5 130"></a-light>
+        <!-- Camera -->
+        <a-camera gps-camera rotation-reader gpsMinDistance="5" look-controls="pointerLockEnabled: true"
+            wasd-controls="enabled: false"></a-camera>
+        <a-entity id="helix_bridge" scale="1 1 1" rotation="0 145 0" gltf-model="#bridgeModel"
+            gps-entity-place="latitude: 10.771952; longitude: 106.706904" visible="false" gesture-handler>
+        </a-entity>
+        <!-- <a-entity id="bridgeMarker" scale="0.5 0.5 0.5" gltf-model="#markerModel" position="0 0 0" rotation="0 0 0"
+            visible="true">
+        </a-entity>
+        <a-entity id="bridgeMarker1" scale="4 4 4" gltf-model="#markerModel1"
+            gps-entity-place="latitude: 10.773127; longitude: 106.706861" rotation="0 0 0" visible="true">
+        </a-entity> -->
+        <a-assets>
+            <a-asset-item id="bridgeModel" src="PBG_Modeling_250214.glb"></a-asset-item>
+            <a-asset-item id="markerModel" src="rhino.glb"></a-asset-item>
+            <a-asset-item id="markerModel1" src="shortfin_mako.glb"></a-asset-item>
+        </a-assets>
+        <a-assets>
+            <img id="fireball" src="images/fireball.png" />
+            <img id="fireballSheet" src="images/fireball-up.png" />
+            <audio id="ambient" src="audio/ambient-night.mp3" preload="auto"></audio>
+            <audio id="launch" src="audio/rocket-launch.wav" preload="auto"></audio>
+            <audio id="burst1" src="audio/firework-burst-short.wav" preload="auto"></audio>
+            <audio id="burst2" src="audio/firework-burst-medium.wav" preload="auto"></audio>
+            <audio id="burst3" src="audio/firework-burst-long.wav" preload="auto"></audio>
+        </a-assets>
+
+        <a-entity id="camera" camera look-controls position="0 1.6 0"></a-entity>
+
+        <a-entity id="ambientSound" sound="src: #ambient; loop: true;"></a-entity>
+        <a-entity id="launchSound" sound="src: #launch; loop: false; poolSize: 4; volume: 0.025;"></a-entity>
+        <a-entity id="burst1Sound" sound="src: #burst1; loop: false; poolSize: 4; volume: 0.025;"></a-entity>
+        <a-entity id="burst2Sound" sound="src: #burst2; loop: false; poolSize: 4; volume: 0.025;"></a-entity>
+        <a-entity id="burst3Sound" sound="src: #burst3; loop: false; poolSize: 4; volume: 0.025;"></a-entity>
+    </a-scene>
+    <!-- display: none; -->
+    <div id="coords"
+        style="display: none; position: fixed; top: 10px; left: 10px; background: rgba(0,0,0,0.7); color: white; padding: 10px; border-radius: 5px; font-size: 14px;">
+        📍 Vui lòng cấp quyền truy cập vị trí...
+    </div>
+    <div id="cameraInfo"
+        style="display: none; position: fixed; top: 10px; right: 10px; background: rgba(0,0,0,0.7); color: white; padding: 10px; font-size: 14px; z-index: 1000;">
+        Loading camera info...
+    </div>
+    <div id="warningText" style="position: fixed; bottom: 10px; left: 40%; transform: translateX(-40%);
+            background: rgb(252, 109, 109); color: white; padding: 10px 10px; 
+            border-radius: 10px; font-size: 18px; display: none;">
+        🚧 Vui lòng vào khu vực trải nghiệm! 🚧
+    </div>
+    <!-- div used for enter button (user interaction to trigger audio) and fade-in -->
+    <!-- <div class="mainUI" id="uiDiv" oncontextmenu="return false;">
+        <div class="regionUI">
+            <div class="buttonUI">
+                <img src="images/buttons/enter.png" id="buttonEnter" />
+            </div>
+        </div>
+    </div> -->
+
+
+    <button id="showBridgeButton" style="position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%);
+    padding: 10px 20px; font-size: 18px; background: #007BFF; color: white;
+    border: none; border-radius: 5px; cursor: pointer; z-index: 999;">
+        🔍
+    </button>
+    <script>
+        document.addEventListener("DOMContentLoaded", function () {
+            let bridge = document.getElementById("helix_bridge");
+            bridge.addEventListener("model-loaded", function () {
+                bridge.setAttribute("visible", "false");
+            });
+        });
+        document.getElementById("showBridgeButton").addEventListener("click", function () {
+            let bridge = document.getElementById("helix_bridge");
+            bridge.setAttribute("visible", "true");
+            let initialPosition = bridge.getAttribute("position");
+            setTimeout(() => {
+                bridge.setAttribute("animation", `property: position; from: ${initialPosition.x} 90 ${initialPosition.z}; to: ${initialPosition.x} ${initialPosition.y} ${initialPosition.z}; dur: 900; easing: easeOutBack ;`);
+            }, 100); // Chờ 100ms để tránh lỗi chưa load model
+            this.style.display = "none"; // Ẩn nút sau khi bấm
+            // activate the spawner
+            //let camera = document.querySelector("#camera");
+            // camera.setAttribute("spawner", "");
+        });
+        console.log({ THREE, AFRAME });
+        // 🎯 Theo dõi vị trí GPS
+        window.addEventListener('DOMContentLoaded', (event) => {  // <--- CRUCIAL CHANGE
+            navigator.geolocation.watchPosition(success, error, {
+                enableHighAccuracy: true, maximumAge: 1000,
+                timeout: 5000
+            });
+        });
+
+        // function updateBridgeScale() {
+        //     let camera = document.querySelector("[gps-camera]");
+        //     let bridge = document.getElementById("helix_bridge");
+        //     if (!camera || !bridge) return;
+        //     let userPos = camera.components["gps-camera"].currentCoords;
+        //     let bridgePos = { latitude: 10.771952, longitude: 106.706904 }; // Tọa độ tâm cầu
+        //     if (!userPos || !userPos.latitude) return;
+        //     let distance = calculateDistance(userPos.latitude, userPos.longitude, bridgePos.latitude, bridgePos.longitude);
+        //     // Người dùng di chuyển từ 155m đến 170m tính từ tâm cầu
+        //     let scaleFactor = Math.max(0.5, Math.min(1, 1 - (distance - 155) / 15));
+        //     bridge.setAttribute("scale", `${scaleFactor} ${scaleFactor} ${scaleFactor}`);
+        //     // Ẩn cầu nếu quá xa (>175m)
+        //     if (distance > 165) {
+        //         bridge.setAttribute("visible", "false");
+        //     } else {
+        //         bridge.setAttribute("visible", "true");
+        //     }
+        // }
+        // Cập nhật mỗi giây
+        // setInterval(updateBridgeScale, 1000);
+
+        let lastCoords = null;
+        function updateCameraRotation() {
+            let camera = document.querySelector("[gps-camera]");
+            if (!camera || !camera.components["gps-camera"].coords) return;
+            let userPos = camera.components["gps-camera"].coords;
+            if (lastCoords) {
+                let angle = getBearing(lastCoords.latitude, lastCoords.longitude, userPos.latitude, userPos.longitude);
+                camera.setAttribute("rotation", `0 ${angle} 0`);
+            }
+            lastCoords = userPos;
+        }
+        // setInterval(updateCameraRotation, 1000);
+
+        // setInterval(() => {
+        //     let camera = document.querySelector("[gps-camera]");
+        //     let bridge = document.getElementById("helix_bridge");
+        //     if (!camera || !bridge) return;
+        //     let camRot = camera.getAttribute("rotation");
+        //     // Xoay cầu theo hướng camera (chỉ Y để giữ chiều ngang)
+        //     bridge.setAttribute("rotation", `0 ${camRot.y} 0`);
+        // }, 1000);
+
+        function updateCameraInfo() {
+            let camera = document.querySelector("[gps-camera]");
+            if (!camera) return;
+            let position = camera.getAttribute("position");
+            let rotation = camera.getAttribute("rotation");
+            let infoText = `
+        📍 <b>Position:</b> x: ${position.x.toFixed(2)}, y: ${position.y.toFixed(2)}, z: ${position.z.toFixed(2)} <br>
+        🔄 <b>Rotation:</b> x: ${rotation.x.toFixed(2)}, y: ${rotation.y.toFixed(2)}, z: ${rotation.z.toFixed(2)}
+    `;
+            document.getElementById("cameraInfo").innerHTML = infoText;
+        }
+        // Cập nhật thông tin mỗi 500ms (0.5 giây)
+        setInterval(updateCameraInfo, 1000);
+
+        // Hàm tính góc xoay dựa trên vị trí trước và sau
+        function getBearing(lat1, lon1, lat2, lon2) {
+            let dLon = (lon2 - lon1) * Math.PI / 180;
+            let y = Math.sin(dLon) * Math.cos(lat2 * Math.PI / 180);
+            let x = Math.cos(lat1 * Math.PI / 180) * Math.sin(lat2 * Math.PI / 180) -
+                Math.sin(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * Math.cos(dLon);
+            let brng = Math.atan2(y, x) * 180 / Math.PI;
+            return (brng + 360) % 360; // Đưa góc về 0 - 360 độ
+        }
+
+        // Chuyển GPS thành tọa độ X, Z
+        const EARTH_RADIUS = 6378137; // Bán kính Trái Đất (m)
+        function gpsToMeters(lat1, lon1, lat2, lon2) {
+            let dLat = (lat2 - lat1) * (Math.PI / 180);
+            let dLon = (lon2 - lon1) * (Math.PI / 180);
+            let x = dLon * EARTH_RADIUS * Math.cos(lat1 * Math.PI / 180);
+            let z = dLat * EARTH_RADIUS;
+            return { x, z };
+        }
+
+        function calculateDistance(lat1, lon1, lat2, lon2) {
+            const R = 6371e3; // Bán kính Trái Đất (mét)
+            const φ1 = lat1 * Math.PI / 180;
+            const φ2 = lat2 * Math.PI / 180;
+            const Δφ = (lat2 - lat1) * Math.PI / 180;
+            const Δλ = (lon2 - lon1) * Math.PI / 180;
+
+            const a = Math.sin(Δφ / 2) * Math.sin(Δφ / 2) +
+                Math.cos(φ1) * Math.cos(φ2) *
+                Math.sin(Δλ / 2) * Math.sin(Δλ / 2);
+            const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+
+            return R * c; // Khoảng cách tính bằng mét
+        }
+
+
+        function lerp(start, end, t) {
+            return start + (end - start) * t;
+        }
+
+        function smoothstep(edge0, edge1, x) {
+            x = Math.max(0, Math.min(1, (x - edge0) / (edge1 - edge0)));
+            return x * x * (3 - 2 * x);
+        }
+        // Khoảng cách cơ bản
+        const baseDist = 200;
+        const minDist = 185;
+        const maxDist = 235;
+        // Scale
+        const minScale = 0.28;
+        const maxScale = 1.35;
+        let previousLat = null;
+        let previousLon = null;
+
+
+        function success(position) {
+            let lat = position.coords.latitude;
+            let lon = position.coords.longitude;
+            // Giảm rung bằng cách chỉ cập nhật khi chênh lệch lớn hơn ngưỡng
+            if (previousLat !== null && previousLon !== null) {
+                let deltaLat = Math.abs(lat - previousLat);
+                let deltaLon = Math.abs(lon - previousLon);
+                if (deltaLat < 0.00001 && deltaLon < 0.00001) {
+                    return; // Bỏ qua nếu sự thay đổi quá nhỏ
+                }
+            }
+            previousLat = lat;
+            previousLon = lon;
+
+            let bridgeLat = 10.771952;
+            let bridgeLon = 106.706904;
+            let PointLat = 10.773255;
+            let PointLon = 106.707328;
+            let { x, z } = gpsToMeters(bridgeLat, bridgeLon, lat, lon);
+            let distance = parseFloat(calculateDistance(lat, lon, bridgeLat, bridgeLon).toFixed(2));
+            let distancePoint = parseFloat((lat, lon, PointLat, PointLon).toFixed(2));
+            let bridge = document.getElementById("helix_bridge");
+            let warningText = document.getElementById("warningText");
+            if (bridge) {
+                let total = distance + distancePoint;
+                let t = smoothstep(minDist, maxDist, total);
+                let scaleFactor = lerp(maxScale, minScale, t);
+                // bridge.setAttribute("scale", `${scaleFactor} ${scaleFactor} ${scaleFactor}`);
+                if (!isNaN(scaleFactor)) {
+                    bridge.setAttribute("scale", `${scaleFactor} ${scaleFactor} ${scaleFactor}`);
+                } else {
+                    console.error("Lỗi: scaleFactor bị NaN", { distance, distancePoint, total, t });
+                }
+                if (minDist > total || total > maxDist || distancePoint > 70 || distance > 175 || distance < 135) {
+                    bridge.setAttribute("visible", "false");
+                    warningText.style.display = "block"; // Hiển thị text cảnh báo
+                } else {
+                    bridge.setAttribute("visible", "true");
+                    warningText.style.display = "none"; // Ẩn text cảnh báo
+                }
+                let position = bridge.getAttribute("position");
+                let rotation = bridge.getAttribute("rotation");
+                let scale = bridge.getAttribute("scale");
+                const infoHTML = `
+            📍 Lat: ${lat.toFixed(6)} <br>
+            📍 Lon: ${lon.toFixed(6)} <br>
+            🔢 Khoảng cách cầu: ${distance}m <br>
+            🔢 Khoảng cách sông: ${distancePoint}m <br>
+            🔢 scaleFactor: ${scaleFactor} <br>
+            🔸 <b>Vị trí</b>: x=${position.x.toFixed(2)}, y=${position.y.toFixed(2)}, z=${position.z.toFixed(2)} <br>
+            🔹 <b>Góc quay</b>: x=${rotation.x.toFixed(2)}, y=${rotation.y.toFixed(2)}, z=${rotation.z.toFixed(2)} <br>
+            🔺 <b>Tỉ lệ</b>: x=${scale.x.toFixed(2)}, y=${scale.y.toFixed(2)}, z=${scale.z.toFixed(2)}
+            `;
+                const coordsDiv = document.getElementById("coords");
+                if (coordsDiv) {
+                    coordsDiv.innerHTML = infoHTML;
+                } else {
+                    // Dùng Mutation Observer nếu #coords chưa có trong DOM
+                    const observer = new MutationObserver(mutations => {
+                        const newCoordsDiv = document.getElementById("coords");
+                        if (newCoordsDiv) {
+                            newCoordsDiv.innerHTML = infoHTML;
+                            observer.disconnect(); // Ngừng theo dõi khi đã cập nhật
+                        }
+                    });
+                    observer.observe(document.body, { childList: true, subtree: true });
+                }
+            }
+        }
+        function error() {
+            console.log("❌ Không thể lấy vị trí.");
+        }
+    </script>
+
+</body>
+
+</html>

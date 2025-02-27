@@ -1,0 +1,497 @@
+<!DOCTYPE html>
+<html lang="vi">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WebAR GPS </title>
+
+    <script src="https://aframe.io/releases/1.3.0/aframe.min.js"></script>
+    <script type='text/javascript'
+        src='https://raw.githack.com/AR-js-org/AR.js/3.4.5/three.js/build/ar-threex-location-only.js'></script>
+    <script type='text/javascript'
+        src='https://raw.githack.com/AR-js-org/AR.js/3.4.5/aframe/build/aframe-ar.js'></script>
+
+    <script
+        src="https://cdn.jsdelivr.net/npm/aframe-particle-system-component@1.0.0/aframe-particle-system-component.min.js"></script>
+
+    <script src="js/aframe-environment-component.js"></script>
+    <script src="js/aframe-spe-particles-component.js"></script>
+    <script src="js/extended-wasd-controls.js"></script>
+
+    <script>
+        // 🌉 Xử lý xoay và phóng to bằng 2 ngón tay
+        AFRAME.registerComponent('gesture-handler', {
+            schema: { enabled: { default: true } },
+            init: function () {
+                this.handleScale = this.handleScale.bind(this);
+                this.handleRotation = this.handleRotation.bind(this);
+                this.startDistance = null;
+                this.startX = null;
+
+                this.el.sceneEl.addEventListener("touchstart", (event) => {
+                    if (event.touches.length === 2) {
+                        this.startDistance = this.getDistance(event.touches);
+                    } else if (event.touches.length === 1) {
+                        this.startX = event.touches[0].clientX; // Lưu vị trí X ban đầu
+                    }
+                });
+
+                this.el.sceneEl.addEventListener("touchmove", (event) => {
+                    if (event.touches.length === 2) {
+                        this.handleScale(event);
+                    } else if (event.touches.length === 1) {
+                        this.handleRotation(event);
+                    }
+                });
+            },
+
+            getDistance: function (touches) {
+                let dx = touches[0].clientX - touches[1].clientX;
+                let dy = touches[0].clientY - touches[1].clientY;
+                return Math.sqrt(dx * dx + dy * dy);
+            },
+
+            handleScale: function (event) {
+                let newDistance = this.getDistance(event.touches);
+                if (!this.startDistance) return;
+                let scaleChange = newDistance / this.startDistance;
+                let model = this.el;
+                let scale = model.getAttribute("scale");
+                model.setAttribute("scale", {
+                    x: scale.x * scaleChange,
+                    y: scale.y * scaleChange,
+                    z: scale.z * scaleChange
+                });
+                this.startDistance = newDistance;
+            },
+
+            handleRotation: function (event) {
+                let newX = event.touches[0].clientX;
+                if (this.startX === null) return;
+
+                let rotationChange = (newX - this.startX) * 0.5; // Điều chỉnh tốc độ xoay
+                let model = this.el;
+                let rotation = model.getAttribute("rotation");
+
+                model.setAttribute("rotation", {
+                    x: 0, // Không thay đổi trục X
+                    y: rotation.y + rotationChange, // Xoay quanh trục Y
+                    z: 0  // Không thay đổi trục Z
+                });
+
+                this.startX = newX;
+            }
+
+        });
+    </script>
+</head>
+
+<body>
+    <a-scene vr-mode-ui="enabled: false" arjs="sourceType: webcam; videoTexture: true; debugUIEnabled: true;">
+        <!-- Thêm ánh sáng -->
+        <a-light type="ambient" color="#ffffff" intensity="0.5"></a-light>
+        <a-light type="directional" color="#ffffff" intensity="1.0" position="1 3 1"></a-light>
+        <!-- Camera -->
+        <!-- <a-camera gps-camera gpsMinDistance="5" rotation-reader look-controls="pointerLockEnabled: true"></a-camera> -->
+        <a-camera gps-camera gpsMinDistance="5" rotation-reader look-controls="pointerLockEnabled: true"
+            fov="80"></a-camera>
+
+        <a-entity id="helix_bridge" gps-entity-place="latitude: 10.910617; longitude: 106.584821" scale="1 1 1"
+            gltf-model="#bridgeModel" rotation="0 50 0" position="0 0 0" visible="false" gesture-handler></a-entity>
+
+        <!-- Model đánh dấu vị trí cầu -->
+        <a-entity id="bridgeMarker" gps-entity-place="latitude: 10.911042; longitude: 106.584666" scale="2 2 2"
+            gltf-model="#markerModel" position="0 -10 0" rotation="0 180 0" visible="false">
+        </a-entity>
+
+        <!-- <a-entity id="helix_bridge" gps-entity-place="latitude: 10.912037; longitude: 106.584806" scale="1 1 1"
+            gltf-model="#bridgeModel" rotation="0 0 0" position="0 10 0" visible="false" gesture-handler
+            animation__drop="property: position; from: 0 10 0; to: 0 0 0; dur: 2000; easing: easeOutBack ; startEvents: startDrop;">
+        </a-entity> -->
+        <a-assets>
+            <a-asset-item id="bridgeModel" src="PBG_Modeling_250214.glb"></a-asset-item>
+            <a-asset-item id="markerModel" src="text.glb"></a-asset-item>
+            <a-asset-item id="customFont" src="fonts/ARIAL.TTF-msdf.json"></a-asset-item>
+        </a-assets>
+        <a-entity firework position="5 0 0"></a-entity>
+        <a-entity id="textArea" position="0 -10 10" scale="10 10 10"
+            material="color: #444444; transparent: true; opacity: 0.80;" text="anchor: center; align: center; baseline: center; wrapCount: 20;
+				transparent: true; opacity: 0.90; color: #FFFFFF;
+				value: Nutifood\n NÂNG TẦM DẤU ẤN\n NỐI NHỊP TƯƠNG LAI;
+                width: 5;" updater visible="false">
+        </a-entity>
+
+        <!-- <a-entity id="textArea" position="0 1.5 -2">
+            <a-entity text="value: Notifood; anchor: center; color: #AAAAFF; width: 8; baseline: top" position="0 0.1 0"></a-entity>
+            <a-entity text="value: Nâng tầm dấu ấn\nNối nhịp tương lai; anchor: center; color: #AAAAFF; width: 4; baseline: top" position="0 -0.2 0"></a-entity>
+        </a-entity> -->
+        <!-- <a-entity id="flare1" gps-entity-place="latitude: 10.910656; longitude: 106.584478">
+            <a-sphere radius="2" color="#FFD700" material="shader: flat; emissive: #FFD700; opacity: 0.8"
+                animation="property: material.opacity; from: 0.5; to: 1; dur: 600; loop: true; dir: alternate">
+            </a-sphere>
+        </a-entity>
+
+        <a-entity id="flare2" gps-entity-place="latitude: 10.910656; longitude: 106.585165">
+            <a-sphere radius="2" color="#FFD700" material="shader: flat; emissive: #FFD700; opacity: 0.8"
+                animation="property: material.opacity; from: 0.5; to: 1; dur: 600; loop: true; dir: alternate">
+            </a-sphere>
+        </a-entity> -->
+
+        <!-- Hiệu ứng ánh sáng ở đầu cầu 1 -->
+        <a-entity gps-entity-place="latitude: 10.910656; longitude: 106.584478" spe-particles="
+    texture: images/particles/star.png;
+    color: #FFD700, #FFA500, #FFFF00, #FFFFFF;
+    distribution: BOX;
+    opacity: 1, 1, 1, 0;
+    velocity: 0 1 0;
+    velocity-spread: 0.5 1 0.5; 
+    blending: additive;
+    particle-count: 150;
+    angle: 0, 6.28;
+    maxAge: 2.5;">
+        </a-entity>
+
+        <!-- Hiệu ứng ánh sáng ở đầu cầu 2 -->
+        <a-entity gps-entity-place="latitude: 10.910656; longitude: 106.585165" spe-particles="
+    texture: images/particles/star.png;
+    color: #FFD700, #FFA500, #FFFF00, #FFFFFF;
+    distribution: BOX;
+    opacity: 1, 1, 1, 0;
+    velocity: 0 1 0;
+    velocity-spread: 0.5 1 0.5; 
+    blending: additive;
+    particle-count: 150;
+    angle: 0, 6.28;
+    maxAge: 2.5;">
+        </a-entity>
+
+    </a-scene>
+    <div id="coords"
+        style="position: fixed; top: 10px; left: 10px; background: rgba(0,0,0,0.7); color: white; padding: 10px; border-radius: 5px; font-size: 14px;">
+        📍 Vui lòng cấp quyền truy cập vị trí...
+    </div>
+    <button id="showBridgeButton" style="position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%);
+    padding: 10px 20px; font-size: 18px; background: #007BFF; color: white;
+    border: none; border-radius: 5px; cursor: pointer; z-index: 999;">
+        🔍
+    </button>
+    <script>
+        AFRAME.registerComponent("firework", {
+            schema: {
+                texture: { type: "string", default: "FIRE1.png" } // Hình ảnh pháo hoa
+            },
+
+            init: function () {
+                this.fireworks = [];
+                this.createFirework = this.createFirework.bind(this);
+
+                const bridge = document.getElementById("helix_bridge");
+
+                if (bridge) {
+                    bridge.addEventListener('model-loaded', () => {
+                        setInterval(() => {
+                            this.createFirework(0, 1.2);
+                            this.createFirework(50, 2.5);
+                            this.createFirework(-50, 3.2);
+                        }, 1000);
+                    });
+                } else {
+                    console.error("❌ Không tìm thấy cầu!");
+                }
+            },
+
+            createFirework: function (offset, explosionTime) {
+                let bridge = document.getElementById("helix_bridge");
+                if (!bridge) return;
+
+                let worldPos = new THREE.Vector3();
+                bridge.object3D.getWorldPosition(worldPos);
+
+                let firework = {
+                    state: "ascending",
+                    velocity: new THREE.Vector3(0, 6, 0),
+                    position: new THREE.Vector3(worldPos.x + offset, worldPos.y + 2, worldPos.z),
+                    explosionTime: explosionTime, // ⏳ Thời gian nổ khác nhau
+                    time: 0,
+                    particles: [],
+                    trail: [] // Lưu các điểm để vẽ trail
+                };
+
+                let textureLoader = new THREE.TextureLoader();
+                let texture = textureLoader.load(this.data.texture);
+                let material = new THREE.SpriteMaterial({ map: texture, transparent: true });
+
+                firework.mesh = new THREE.Sprite(material);
+                firework.mesh.scale.set(1.2, 1.2, 1);
+
+                firework.trailMaterial = new THREE.LineBasicMaterial({ color: 0xffcc00 });
+                firework.trailGeometry = new THREE.BufferGeometry();
+                firework.trailMesh = new THREE.Line(firework.trailGeometry, firework.trailMaterial);
+                this.el.setObject3D("trail" + Date.now(), firework.trailMesh);
+
+                this.el.setObject3D("firework" + Date.now(), firework.mesh);
+                this.fireworks.push(firework);
+            },
+
+            tick: function (time, delta) {
+                let removeIndexes = [];
+
+                this.fireworks.forEach((firework, index) => {
+                    firework.time += delta * 0.001;
+
+                    if (firework.state === "ascending") {
+                        firework.position.addScaledVector(firework.velocity, delta * 0.001);
+                        firework.velocity.y -= 0.02;
+                        firework.mesh.position.copy(firework.position);
+
+                        // 🎇 Thêm điểm vào trail
+                        if (firework.trail.length < 10) {
+                            firework.trail.push(firework.position.clone());
+                        } else {
+                            firework.trail.shift();
+                            firework.trail.push(firework.position.clone());
+                        }
+
+                        let positions = [];
+                        firework.trail.forEach(pos => {
+                            positions.push(pos.x, pos.y, pos.z);
+                        });
+
+                        firework.trailGeometry.setAttribute("position", new THREE.Float32BufferAttribute(positions, 3));
+                        firework.trailGeometry.needsUpdate = true;
+
+                        if (firework.time >= firework.explosionTime) {
+                            firework.state = "exploding";
+                            firework.particles = this.createExplosionParticles(firework.position);
+                            firework.mesh.visible = false;
+                        }
+                    } else if (firework.state === "exploding") {
+                        let expiredParticles = [];
+
+                        firework.particles.forEach((particle, i) => {
+                            particle.time += delta * 0.001;
+
+                            if (particle.time >= 1.5) {
+                                expiredParticles.push(i);
+                            } else {
+                                particle.velocity.y -= 0.02;
+                                particle.position.addScaledVector(particle.velocity, delta * 0.001);
+                                particle.mesh.position.copy(particle.position);
+
+                                let scaleFactor = 1 - (particle.time / 1.5);
+                                particle.mesh.scale.set(scaleFactor, scaleFactor, scaleFactor);
+                            }
+                        });
+
+                        expiredParticles.reverse().forEach(i => {
+                            this.el.removeObject3D("particle" + firework.particles[i].id);
+                            firework.particles.splice(i, 1);
+                        });
+
+                        if (firework.particles.length === 0) {
+                            removeIndexes.push(index);
+                        }
+                    }
+                });
+
+                removeIndexes.reverse().forEach(index => {
+                    this.el.removeObject3D("firework" + index);
+                    this.el.removeObject3D("trail" + index);
+                    this.fireworks.splice(index, 1);
+                });
+            },
+
+            createExplosionParticles: function (position) {
+                let particles = [];
+                let count = 50;
+
+                for (let i = 0; i < count; i++) {
+                    let particle = {
+                        id: Date.now() + i,
+                        position: position.clone(),
+                        velocity: new THREE.Vector3(
+                            (Math.random() - 0.5) * 3,
+                            Math.random() * 4,
+                            (Math.random() - 0.5) * 3
+                        ),
+                        time: 0,
+                    };
+
+                    let textureLoader = new THREE.TextureLoader();
+                    let texture = textureLoader.load(this.data.texture);
+                    let material = new THREE.SpriteMaterial({ map: texture, transparent: true });
+
+                    particle.mesh = new THREE.Sprite(material);
+                    particle.mesh.scale.set(1, 1, 1);
+                    this.el.setObject3D("particle" + particle.id, particle.mesh);
+
+                    particles.push(particle);
+                }
+
+                return particles;
+            }
+        });
+        document.addEventListener("DOMContentLoaded", function () {
+            let bridge = document.getElementById("helix_bridge");
+            bridge.addEventListener("model-loaded", function () {
+                bridge.setAttribute("visible", "false");
+            });
+        });
+
+
+        document.getElementById("showBridgeButton").addEventListener("click", function () {
+            let bridge = document.getElementById("helix_bridge");
+            let marker = document.getElementById("bridgeMarker");
+            // Hiển thị cầu trước khi bắt đầu animation
+            bridge.setAttribute("visible", "true");
+            // Lấy vị trí GPS thực tế của cầu
+            let initialPosition = bridge.getAttribute("position");
+            let makerPosition = marker.getAttribute("position");
+
+            // Chờ một chút trước khi chạy animation để chắc chắn cầu hiển thị trước
+            setTimeout(() => {
+                bridge.setAttribute("animation", `property: position; from: ${initialPosition.x} 75 ${initialPosition.z}; to: ${initialPosition.x} ${initialPosition.y} ${initialPosition.z}; dur: 900; easing: easeOutBack ;`);
+                // Đợi 3s (thời gian cầu xuất hiện) rồi mới hiển thị text
+                // Chờ 5s rồi mới hiện marker
+                setTimeout(() => {
+                    marker.setAttribute("visible", "true");
+                    marker.setAttribute("animation", `property: position; from: ${makerPosition.x} ${makerPosition.y - 30} ${makerPosition.z}; to: ${makerPosition.x} ${makerPosition.y} ${makerPosition.z}; dur: 1000; easing: linear;`);
+                }, 3000);
+                setTimeout(() => {
+                    const textArea = document.getElementById("textArea");
+                    // Hiện text
+                    // Tính toán vị trí text cách cầu một đoạn (ví dụ: 50m về phía trước theo trục Z)
+                    let textX = initialPosition.x;
+                    let textY = initialPosition.y; // Chiều cao hiển thị text
+                    let textZ = initialPosition.z + 50; // Lùi về phía sau 50m
+                    console.log(`hi: ${textX} ${textY} ${textZ}`)
+                    // Đặt vị trí ban đầu của text (ẩn dưới mặt đất)
+                    textArea.setAttribute("position", `${textX} -20 ${textZ}`);
+                    textArea.setAttribute("visible", "true");
+                    textArea.setAttribute("animation", `property: position; from: ${textX} -20 ${textZ}; to: ${textX} ${textY} ${textZ}; dur: 1500; easing: easeOutBack;`);
+                }, 2000); // Chờ cầu xuất hiện xong
+            }, 10); // Chờ 100ms để tránh lỗi chưa load model
+            this.style.display = "none"; // Ẩn nút sau khi bấm
+        });
+
+        // document.getElementById("showBridgeButton").addEventListener("click", function () {
+        //     let bridge = document.getElementById("helix_bridge");
+        //     // Hiển thị cầu
+        //     bridge.setAttribute("visible", "true");
+        //     // Gửi sự kiện để bắt đầu animation
+        //     bridge.emit("startDrop");
+        //     this.style.display = "none"; // Ẩn nút sau khi bấm
+        // });
+
+
+        // ... (geolocation code remains the same) ...
+        console.log({ THREE, AFRAME });
+        // 🎯 Theo dõi vị trí GPS
+        // Correct way to handle DOM ready and geolocation:
+        window.addEventListener('DOMContentLoaded', (event) => {  // <--- CRUCIAL CHANGE
+            navigator.geolocation.watchPosition(success, error, {
+                enableHighAccuracy: true, maximumAge: 1000,
+                timeout: 5000
+            });
+        });
+
+        // Lưu vị trí trước đó để so sánh
+        let lastPos = { x: 0, y: 0, z: 0 };
+        // Hệ số chuyển đổi độ sang mét (xấp xỉ)
+        const EARTH_RADIUS = 6378137; // Bán kính Trái Đất (m)
+        function gpsToMeters(lat1, lon1, lat2, lon2) {
+            let dLat = (lat2 - lat1) * (Math.PI / 180);
+            let dLon = (lon2 - lon1) * (Math.PI / 180);
+            let x = dLon * EARTH_RADIUS * Math.cos(lat1 * Math.PI / 180);
+            let z = dLat * EARTH_RADIUS;
+            return { x, z };
+        }
+
+        function updatePosition(newX, newY, newZ) {
+            let bridge = document.getElementById("helix_bridge");
+            if (!bridge) {
+                console.error("Lỗi: Không tìm thấy cầu với ID 'helix_bridge'");
+                return;
+            }
+            // Chỉ cập nhật nếu thay đổi vị trí lớn hơn 0.3 mét
+            if (Math.abs(newX - lastPos.x) > 0.3 || Math.abs(newZ - lastPos.z) > 0.3) {
+                bridge.setAttribute("position", { x: newX, y: newY, z: newZ });
+                lastPos = { x: newX, y: newY, z: newZ };
+            }
+        }
+
+        function calculateDistance(lat1, lon1, lat2, lon2) {
+            const R = 6371e3; // Bán kính Trái Đất (mét)
+            const φ1 = lat1 * Math.PI / 180;
+            const φ2 = lat2 * Math.PI / 180;
+            const Δφ = (lat2 - lat1) * Math.PI / 180;
+            const Δλ = (lon2 - lon1) * Math.PI / 180;
+
+            const a = Math.sin(Δφ / 2) * Math.sin(Δφ / 2) +
+                Math.cos(φ1) * Math.cos(φ2) *
+                Math.sin(Δλ / 2) * Math.sin(Δλ / 2);
+            const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+
+            return R * c; // Khoảng cách tính bằng mét
+        }
+
+        function success(position) {
+            let lat = position.coords.latitude;
+            let lon = position.coords.longitude;
+            let bridgeLat = 10.910617;
+            let bridgeLon = 106.584821;
+            // Chuyển GPS thành tọa độ X, Z
+            let { x, z } = gpsToMeters(bridgeLat, bridgeLon, lat, lon);
+
+            // Cập nhật vị trí cầu
+            // updatePosition(x, 0, z);
+            let distance = calculateDistance(lat, lon, bridgeLat, bridgeLon).toFixed(2); // Làm tròn 2 số lẻ
+
+            // document.getElementById("coords").innerHTML = `📍 Lat: ${lat} <br> Lon: ${lon} <br> 🔢 Khoảng cách: ${distance}m`;
+
+            // Lấy model cây cầu
+            let bridge = document.getElementById("helix_bridge");
+            if (bridge) {
+                let position = bridge.getAttribute("position");
+                let rotation = bridge.getAttribute("rotation");
+                let scale = bridge.getAttribute("scale");
+
+                // Cập nhật thông tin lên màn hình
+                const infoHTML = `
+            📍 Lat: ${lat.toFixed(6)} <br>
+            📍 Lon: ${lon.toFixed(6)} <br>
+            🔢 Khoảng cách: ${distance}m <br>
+            🔸 <b>Vị trí</b>: x=${position.x.toFixed(2)}, y=${position.y.toFixed(2)}, z=${position.z.toFixed(2)} <br>
+            🔹 <b>Góc quay</b>: x=${rotation.x.toFixed(2)}, y=${rotation.y.toFixed(2)}, z=${rotation.z.toFixed(2)} <br>
+            🔺 <b>Tỉ lệ</b>: x=${scale.x.toFixed(2)}, y=${scale.y.toFixed(2)}, z=${scale.z.toFixed(2)}
+            `;
+                // Cập nhật nội dung vào #coords nếu có
+                const coordsDiv = document.getElementById("coords");
+                if (coordsDiv) {
+                    coordsDiv.innerHTML = infoHTML;
+                } else {
+                    // Dùng Mutation Observer nếu #coords chưa có trong DOM
+                    const observer = new MutationObserver(mutations => {
+                        const newCoordsDiv = document.getElementById("coords");
+                        if (newCoordsDiv) {
+                            newCoordsDiv.innerHTML = infoHTML;
+                            observer.disconnect(); // Ngừng theo dõi khi đã cập nhật
+                        }
+                    });
+                    observer.observe(document.body, { childList: true, subtree: true });
+                }
+            }
+
+        }
+
+
+        function error() {
+            console.log("❌ Không thể lấy vị trí.");
+        }
+
+    </script>
+
+</body>
+
+</html>
