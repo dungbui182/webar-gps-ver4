@@ -605,8 +605,9 @@
 
             let bridgeLat = 10.771952;
             let bridgeLon = 106.706904;
-            let PointLat = 10.773255;
-            let PointLon = 106.707328;
+            let PointLat = 10.7732503;
+            let PointLon = 106.7071651;
+            
             let { x, z } = gpsToMeters(bridgeLat, bridgeLon, lat, lon);
             let distance = parseFloat(calculateDistance(lat, lon, bridgeLat, bridgeLon).toFixed(2));
             let distancePoint = parseFloat((lat, lon, PointLat, PointLon).toFixed(2));
