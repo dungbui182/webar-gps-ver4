@@ -624,10 +624,10 @@
                     console.error("Lỗi: scaleFactor bị NaN", { distance, distancePoint, total, t });
                 }
                 if (minDist > total || total > maxDist || distancePoint > 70 || distance > 175 || distance < 135) {
-                    bridge.setAttribute("visible", "false");
+                    // bridge.setAttribute("visible", "false");
                     warningText.style.display = "block"; // Hiển thị text cảnh báo
                 } else {
-                    bridge.setAttribute("visible", "true");
+                    // bridge.setAttribute("visible", "true");
                     warningText.style.display = "none"; // Ẩn text cảnh báo
                 }
                 let position = bridge.getAttribute("position");
