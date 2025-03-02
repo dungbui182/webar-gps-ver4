@@ -688,58 +688,34 @@
         }
     </script>
     <script>
-        document.addEventListener("DOMContentLoaded", function () {
-            function showARUI(show) {
-                let elements = ["warningText", "showBridgeButton"];
-                elements.forEach(id => {
-                    let el = document.getElementById(id);
-                    if (el) el.style.display = show ? "block" : "none"; // Kiểm tra trước khi thay đổi style
-                });
-            }
-        
-            function validateNumberInput(input) {
-                // Chỉ cho nhập số (xóa các ký tự không phải số)
-                input.value = input.value.replace(/\D/g, '');
-            }
-        
-            function register() {
-                let phoneInput = document.getElementById("phone-number");
-                let errorMsg = document.getElementById("error-msg");
-                let registerScreen = document.getElementById("register-screen");
-                let arScene = document.getElementById("ar-scene");
+         function showARUI(show) {
+            let elements = ["warningText","showBridgeButton"];
+            elements.forEach(id => {
+                document.getElementById(id).style.display = show ? "block" : "none";
+            });
+        }
+        function validateNumberInput(input) {
+        // Chỉ cho nhập số (xóa các ký tự không phải số)
+        input.value = input.value.replace(/\D/g, '');
+        }
+        function register() {
+            let phoneInput = document.getElementById("phone-number").value;
+            let errorMsg = document.getElementById("error-msg");
+            if (/^\d{10}$/.test(phoneInput)) {
+                document.getElementById("register-screen").style.display = "none";
+                document.getElementById("ar-scene").style.display = "block";
                 let bridge = document.getElementById("helix_bridge");
-        
-                if (phoneInput && errorMsg && registerScreen && arScene && bridge) {
-                    if (/^\d{10}$/.test(phoneInput.value)) {
-                        registerScreen.style.display = "none";
-                        arScene.style.display = "block";
-                        bridge.setAttribute("visible", "false");
-                        showARUI(true); // Hiện UI AR
-                    } else {
-                        errorMsg.textContent = "Số điện thoại không hợp lệ!";
-                    }
-                } else {
-                    console.error("❌ Một số phần tử không tồn tại, kiểm tra lại HTML!");
-                }
+                bridge.setAttribute("visible", "false");
+                showARUI(true); // Hiện thông báo khi vào AR
+            } else {
+                errorMsg.textContent = "Số điện thoại không hợp lệ!";
             }
-        
-            function exitAR() {
-                let registerScreen = document.getElementById("register-screen");
-                let arScene = document.getElementById("ar-scene");
-        
-                if (registerScreen && arScene) {
-                    arScene.style.display = "none";
-                    registerScreen.style.display = "flex";
-                    showARUI(false); // Ẩn UI AR
-                } else {
-                    console.error("❌ Không tìm thấy 'ar-scene' hoặc 'register-screen'!");
-                }
-            }
-    
-            // Gán sự kiện nút đăng ký nếu có
-            let registerButton = document.getElementById("register-button");
-            if (registerButton) registerButton.addEventListener("click", register);
-        });  
+        }
+        function exitAR() {
+            document.getElementById("ar-scene").style.display = "none";
+            document.getElementById("register-screen").style.display = "flex";
+            showARUI(false); // Ẩn thông báo khi thoát AR
+        }
     </script>
     
 </body>
