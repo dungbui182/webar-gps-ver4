@@ -405,7 +405,7 @@
         <a-camera gps-camera rotation-reader gpsMinDistance="5" look-controls="pointerLockEnabled: true"
             wasd-controls="enabled: false"></a-camera>
         <a-entity id="helix_bridge" scale="1 1 1" rotation="0 150 0" gltf-model="#bridgeModel"
-            gps-entity-place="latitude: 10.771952; longitude: 106.706904" visible="false" gesture-handler>
+            gps-entity-place="latitude: 10.911284; longitude: 106.584865" visible="false" gesture-handler>
         </a-entity>
         <!-- <a-entity id="bridgeMarker" scale="0.5 0.5 0.5" gltf-model="#markerModel" position="0 0 0" rotation="0 0 0"
             visible="true">
@@ -503,7 +503,7 @@
         //     let bridge = document.getElementById("helix_bridge");
         //     if (!camera || !bridge) return;
         //     let userPos = camera.components["gps-camera"].currentCoords;
-        //     let bridgePos = { latitude: 10.771952, longitude: 106.706904 }; // Tọa độ tâm cầu
+        //     let bridgePos = { latitude: 10.911284, longitude: 106.584865 }; // Tọa độ tâm cầu
         //     if (!userPos || !userPos.latitude) return;
         //     let distance = calculateDistance(userPos.latitude, userPos.longitude, bridgePos.latitude, bridgePos.longitude);
         //     // Người dùng di chuyển từ 155m đến 170m tính từ tâm cầu
@@ -604,7 +604,7 @@
         const minDist = 185;
         const maxDist = 235;
         // Scale
-        const minScale = 0.28;
+        const minScale = 0.20;
         const maxScale = 1.35;
         let previousLat = null;
         let previousLon = null;
@@ -624,10 +624,14 @@
             previousLat = lat;
             previousLon = lon;
 
-            let bridgeLat = 10.771952;
-            let bridgeLon = 106.706904;
-            let PointLat = 10.7732526;
-            let PointLon = 106.7073515;
+            // let bridgeLat = 10.911284;
+            // let bridgeLon = 106.584865;
+            // let PointLat = 10.7732526;
+            // let PointLon = 106.7073515;
+            let bridgeLat = 10.911284;
+            let bridgeLon = 106.584865;
+            let PointLat = 10.912571;
+            let PointLon = 106.585356;
             
             let { x, z } = gpsToMeters(bridgeLat, bridgeLon, lat, lon);
             let distance = parseFloat(calculateDistance(lat, lon, bridgeLat, bridgeLon).toFixed(2));
