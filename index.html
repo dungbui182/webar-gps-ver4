@@ -349,33 +349,49 @@
             });
     </script>
 
-    <style>
-        .mainUI {
+<style>
+        body {
+            margin: 0;
+            font-family: Arial, sans-serif;
+            text-align: center;
+        }
+
+        #register-screen {
             position: fixed;
-            top: 0px;
+            top: 0;
+            left: 0;
             width: 100%;
             height: 100%;
-            z-index: 1;
-            pointer-events: none;
-            /* allow click-through in transparent areas */
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-
-        .regionUI {
-            position: absolute;
-            display: flex;
-            flex-direction: row;
-            pointer-events: none;
-        }
-
-        .buttonUI {
+            background: url('/images/BGBridge.png') no-repeat center center/cover;
             display: flex;
             flex-direction: column;
             justify-content: center;
-            pointer-events: auto;
-            filter: drop-shadow(0px 0px 20px white);
+            align-items: center;
+        }
+
+        .overlay {
+            background: rgba(0, 0, 0, 0.5);
+            padding: 20px;
+            border-radius: 10px;
+        }
+
+        input {
+            padding: 10px;
+            font-size: 16px;
+            width: 200px;
+            margin-bottom: 10px;
+            text-align: center;
+        }
+
+        button {
+            padding: 10px;
+            font-size: 16px;
+            cursor: pointer;
+        }
+
+        #error-msg {
+            color: red;
+            margin-top: 10px;
         }
     </style>
 </head>
@@ -388,7 +404,7 @@
         <!-- Camera -->
         <a-camera gps-camera rotation-reader gpsMinDistance="5" look-controls="pointerLockEnabled: true"
             wasd-controls="enabled: false"></a-camera>
-        <a-entity id="helix_bridge" scale="1 1 1" rotation="0 145 0" gltf-model="#bridgeModel"
+        <a-entity id="helix_bridge" scale="1 1 1" rotation="0 150 0" gltf-model="#bridgeModel"
             gps-entity-place="latitude: 10.771952; longitude: 106.706904" visible="false" gesture-handler>
         </a-entity>
         <!-- <a-entity id="bridgeMarker" scale="0.5 0.5 0.5" gltf-model="#markerModel" position="0 0 0" rotation="0 0 0"
@@ -420,6 +436,15 @@
         <a-entity id="burst2Sound" sound="src: #burst2; loop: false; poolSize: 4; volume: 0.025;"></a-entity>
         <a-entity id="burst3Sound" sound="src: #burst3; loop: false; poolSize: 4; volume: 0.025;"></a-entity>
     </a-scene>
+     <!-- Màn hình đăng ký với hình nền -->
+    <div id="register-screen">
+        <div class="overlay">
+            <h2 style="color: white;">Nhập số điện thoại</h2>
+            <input type="tel" id="phone-number" placeholder="Nhập 10 số"  maxlength="10" oninput="validateNumberInput(this)">
+            <button onclick="register()">Đăng ký</button>
+            <p id="error-msg"></p>
+        </div>
+    </div>
     <!-- display: none; -->
     <div id="coords"
         style="display: none; position: fixed; top: 10px; left: 10px; background: rgba(0,0,0,0.7); color: white; padding: 10px; border-radius: 5px; font-size: 14px;">
@@ -434,17 +459,10 @@
             border-radius: 10px; font-size: 18px; display: none;">
         🚧 Vui lòng vào khu vực trải nghiệm! 🚧
     </div>
-    <!-- div used for enter button (user interaction to trigger audio) and fade-in -->
-    <!-- <div class="mainUI" id="uiDiv" oncontextmenu="return false;">
-        <div class="regionUI">
-            <div class="buttonUI">
-                <img src="images/buttons/enter.png" id="buttonEnter" />
-            </div>
-        </div>
-    </div> -->
 
 
-    <button id="showBridgeButton" style="position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%);
+
+    <button id="showBridgeButton" style="display: none; position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%);
     padding: 10px 20px; font-size: 18px; background: #007BFF; color: white;
     border: none; border-radius: 5px; cursor: pointer; z-index: 999;">
         🔍
@@ -452,8 +470,11 @@
     <script>
         document.addEventListener("DOMContentLoaded", function () {
             let bridge = document.getElementById("helix_bridge");
+            let showBridgeButton = document.getElementById("showBridgeButton");
+             showARUI(false);
             bridge.addEventListener("model-loaded", function () {
                 bridge.setAttribute("visible", "false");
+                showBridgeButton.style.display = "block";
             });
         });
         document.getElementById("showBridgeButton").addEventListener("click", function () {
@@ -663,7 +684,36 @@
             console.log("❌ Không thể lấy vị trí.");
         }
     </script>
-
+    <script>
+        function showARUI(show) {
+            let elements = ["warningText","showBridgeButton"];
+            elements.forEach(id => {
+                document.getElementById(id).style.display = show ? "block" : "none";
+            });
+        }
+        function validateNumberInput(input) {
+        // Chỉ cho nhập số (xóa các ký tự không phải số)
+        input.value = input.value.replace(/\D/g, '');
+        }
+        function register() {
+            let phoneInput = document.getElementById("phone-number").value;
+            let errorMsg = document.getElementById("error-msg");
+            if (/^\d{10}$/.test(phoneInput)) {
+                document.getElementById("register-screen").style.display = "none";
+                document.getElementById("ar-scene").style.display = "block";
+                let bridge = document.getElementById("helix_bridge");
+                bridge.setAttribute("visible", "false");
+                showARUI(true); // Hiện thông báo khi vào AR
+            } else {
+                errorMsg.textContent = "Số điện thoại không hợp lệ!";
+            }
+        }
+        function exitAR() {
+            document.getElementById("ar-scene").style.display = "none";
+            document.getElementById("register-screen").style.display = "flex";
+            showARUI(false); // Ẩn thông báo khi thoát AR
+        }
+    </script>
 </body>
 
 </html>
