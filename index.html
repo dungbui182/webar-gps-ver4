@@ -703,7 +703,7 @@
             let errorMsg = document.getElementById("error-msg");
             if (/^\d{10}$/.test(phoneInput)) {
                 document.getElementById("register-screen").style.display = "none";
-                document.getElementById("ar-scene").style.display = "block";
+                // document.getElementById("ar-scene").style.display = "block";
                 let bridge = document.getElementById("helix_bridge");
                 bridge.setAttribute("visible", "false");
                 showARUI(true); // Hiện thông báo khi vào AR
